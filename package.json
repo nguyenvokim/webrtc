@@ -7,8 +7,7 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build --mode real",
     "lint": "vue-cli-service lint",
-    "node_dev": "nodemon --watch 'node/**/*.ts' --exec 'ts-node' main.ts",
-    "start": "ts-node main.ts",
+    "start": "node main.js",
     "dev": "ts-node-dev --prefer-ts --respawn --transpile-only -r tsconfig-paths/register --watch ./node main.ts"
   },
   "dependencies": {
