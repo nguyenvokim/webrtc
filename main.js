@@ -3,7 +3,7 @@ const express = require('express');
 const socketIO = require('socket.io');
 const http = require('http');
 const createServer = http.createServer;
-const DEFAULT_PORT = 5000;
+const DEFAULT_PORT = 3000;
 const path = require('path');
 class Server {
     constructor() {

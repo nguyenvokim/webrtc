@@ -66,7 +66,9 @@ export default class PerToPer extends Vue {
     socketNames!: Record<string, string>
     setSocketId!: (payload: string) => void;
     setSocketNames!: (payload: Record<string, string>) => void;
-    myConnection: RTCPeerConnection = new RTCPeerConnection();
+    myConnection: RTCPeerConnection = new RTCPeerConnection({
+        iceServers: [{urls: "stun:stun.1.google.com:19302"}]
+    });
     isStartedCall: boolean = false;
 
     async mounted() {
@@ -179,7 +181,7 @@ export default class PerToPer extends Vue {
 
     async handleRequestCall(socketId: string) {
         console.log('Call me');
-        if (socketId == this.socketId || this.isStartedCall) {
+        if (socketId === this.socketId || this.isStartedCall) {
             return;
         }
         this.isStartedCall = true;
