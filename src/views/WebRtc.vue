@@ -52,7 +52,7 @@ import SelectUser from '@/components/SelectUser.vue';
         ...mapMutations('socket', ['setSocketId', 'setSocketNames'])
     }
 })
-export default class PerToPer extends Vue {
+export default class WebRtc extends Vue {
 
     $refs!: {
         myVideo: HTMLVideoElement;

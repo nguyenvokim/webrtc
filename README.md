@@ -1,5 +1,11 @@
 # webrtc
 
+## Run socket io
+
+```
+node main.js
+```
+
 ## Project setup
 
 ```
