@@ -51,17 +51,19 @@ class Server {
             socket.on('update-name', (name) => {
                 console.log(name);
                 this.socketNames[socket.id] = name;
+
                 socket.emit("update-user-list", {
                     users: this.socketNames
                 });
                 socket.broadcast.emit('update-user-list', {
                     users: this.socketNames
                 })
-            })
+            });
             socket.on('call-user', (payload) => {
                 console.log('Call user');
                 console.log(socket.id);
                 console.log(payload);
+
                 socket.to(payload.targetId).emit('call-made', {
                     offer: payload.offer,
                     targetId: socket.id
@@ -70,19 +72,43 @@ class Server {
             socket.on('make-answer', (payload) => {
                 console.log('Make answer');
                 console.log(payload);
+
                 setTimeout(() => {
                     socket.to(payload.targetId).emit('answer-made', {
                         targetId: socket.id,
                         answer: payload.answer
                     })
                 }, 1000);
-            })
+            });
+            socket.on('send-self-candidate', (payload) => {
+                console.log('Send self candidate');
+                console.log(payload);
+
+                setTimeout(() => {
+                    socket.to(payload.targetId).emit('self-candidate', {
+                        targetId: socket.id,
+                        candidate: payload.candidate
+                    })
+                }, 1000);
+            });
+            socket.on('send-remote-candidate', (payload) => {
+                console.log('Send remote candidate');
+                console.log(payload);
+
+                setTimeout(() => {
+                    socket.to(payload.targetId).emit('remote-candidate', {
+                        targetId: socket.id,
+                        candidate: payload.candidate
+                    })
+                }, 1000);
+            });
             socket.on("disconnect", () => {
                 console.log('Disconnect');
                 this.activeSockets = this.activeSockets.filter(
                     existingSocket => existingSocket !== socket.id
                 );
                 delete this.socketNames[socket.id];
+
                 socket.broadcast.emit("remove-user", {
                     socketId: socket.id
                 });
