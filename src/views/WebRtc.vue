@@ -6,7 +6,8 @@
                     <label class="form-label">Select Camera</label>
                     <div>
                         <select class="form-control" @change="onVideoSourceChange">
-                            <option v-model="selectedDeviceId" :key="device.deviceId" v-for="device in videoDevices" :value="device.deviceId">{{device.label || `Device -${device.deviceId}`}}</option>
+                            <option v-model="selectedDeviceId" :key="device.deviceId" v-for="device in videoDevices" :value="device.deviceId">{{ device.label || `Device -${device.deviceId}` }}
+                            </option>
                         </select>
                     </div>
                 </div>
@@ -23,15 +24,15 @@
                     <a @click.prevent="allowSound" class="btn btn-primary">Allow Sound</a>
                 </div>
                 <div>
-                    <video style="width: 256px; height: 144px" ref="myVideo" autoplay="true"></video>
+                    <video style="width: 256px; height: 144px" ref="myVideo" autoplay muted></video>
                 </div>
             </div>
             <div class="col">
-                <SelectUser @request-call="handleRequestCall" />
+                <SelectUser @request-call="handleRequestCall"/>
             </div>
         </div>
         <div class="row">
-            <video ref="remoteVideo" autoplay="true"></video>
+            <video ref="remoteVideo" autoplay></video>
         </div>
     </div>
 </template>
@@ -45,7 +46,7 @@ import SelectUser from '@/components/SelectUser.vue';
 @Component({
     components: {SelectUser},
     computed: {
-        ...mapState('socket', ['socketId', 'socketNames']),
+        ...mapState('socket', ['socketId']),
         ...mapGetters('socket', ['connectedSocketIds'])
     },
     methods: {
@@ -53,7 +54,6 @@ import SelectUser from '@/components/SelectUser.vue';
     }
 })
 export default class WebRtc extends Vue {
-
     $refs!: {
         myVideo: HTMLVideoElement;
         remoteVideo: HTMLVideoElement;
@@ -63,21 +63,14 @@ export default class WebRtc extends Vue {
     selectedDeviceId: string = '';
     socket!: Socket;
     socketId!: string;
-    socketNames!: Record<string, string>
     setSocketId!: (payload: string) => void;
     setSocketNames!: (payload: Record<string, string>) => void;
-    myConnection: RTCPeerConnection = new RTCPeerConnection({
-        iceServers: [{urls: "stun:stun.1.google.com:19302"}]
-    });
+    myConnection!: RTCPeerConnection;
+    remoteConnection!: RTCPeerConnection;
     isStartedCall: boolean = false;
 
     async mounted() {
-        this.myConnection.ontrack = (event) => {
-            console.log('ON TRACK', event);
-            this.$refs.remoteVideo.srcObject = event.streams[0];
-        }
-        this.loadDevices();
-        this.socket = io().connect()
+        await this.loadDevices();
         this.initSocket();
     }
 
@@ -94,83 +87,91 @@ export default class WebRtc extends Vue {
     }
 
     initSocket() {
+        this.socket = io().connect();
         this.socket.on('connect', () => {
             console.log('Socket Connected');
             console.log(this);
             this.setSocketId(this.socket.id);
-        })
+        });
         this.socket.on('update-user-list', (data) => {
             this.setSocketNames(data.users);
-        })
+        });
         this.socket.on('call-made', async (payload) => {
-            console.log('Received call');
+            console.log('Received Call');
             console.log(payload);
+            if (this.remoteConnection) return;
             try {
-                await this.myConnection.setRemoteDescription(new RTCSessionDescription(payload.offer));
-                await this.connectCamera();
-                const answer = await this.myConnection.createAnswer();
-                await this.myConnection.setLocalDescription(new RTCSessionDescription(answer));
+                this.remoteConnection = new RTCPeerConnection({
+                    iceServers: [{urls: "stun:stun.1.google.com:19302"}]
+                });
+                this.remoteConnection.ontrack = (event) => {
+                    console.log('[REMOTE_CONNECTION][ON_TRACK]:', event);
+                    this.$refs.remoteVideo.srcObject = event.streams[0];
+                };
+                this.remoteConnection.onicecandidate = (event) => {
+                    console.log('[REMOTE_CONNECTION][ON_ICE_CANDIDATE]:', event);
+                    if (event.candidate) {
+                        this.socket.emit('send-remote-candidate', {
+                            targetId: payload.targetId,
+                            candidate: event.candidate
+                        });
+                    }
+                };
+                await this.remoteConnection.setRemoteDescription(new RTCSessionDescription(payload.offer));
+                const answer = await this.remoteConnection.createAnswer();
+                await this.remoteConnection.setLocalDescription(new RTCSessionDescription(answer));
                 console.log('Make Answer', answer);
                 this.socket.emit('make-answer', {
-                    answer: answer,
-                    targetId: payload.targetId
-                })
+                    targetId: payload.targetId,
+                    answer: answer
+                });
+                if (!this.myConnection) {
+                    await this.handleRequestCall(payload.targetId);
+                }
             } catch (e) {
                 console.log(e);
             }
-        })
+        });
         this.socket.on('answer-made', async (payload) => {
-            console.log('ANSWER MADE', payload);
+            console.log('Answer Made', payload);
             await this.myConnection.setRemoteDescription(new RTCSessionDescription(payload.answer));
-        })
+        });
+        this.socket.on('self-candidate', async (payload) => {
+            console.log('Self Candidate', payload);
+            await this.remoteConnection.addIceCandidate(new RTCIceCandidate(payload.candidate));
+        });
+        this.socket.on('remote-candidate', async (payload) => {
+            console.log('Remote Candidate', payload);
+            await this.myConnection.addIceCandidate(new RTCIceCandidate(payload.candidate));
+        });
     }
 
     async startConnect() {
-        this.connectCamera();
+        await this.connectCamera();
     }
 
     async loadDevices() {
         this.allDevices = await navigator.mediaDevices.enumerateDevices();
         console.log(this.allDevices);
     }
+
     async connectCamera() {
-        let mediaSetting: MediaTrackConstraints = {
-            width: { min: 1280 },
-            height: { min: 720 }
-        }
-        if (this.selectedDeviceId) {
-            mediaSetting.deviceId = {exact: this.selectedDeviceId};
-        } else {
-            mediaSetting.facingMode = 'environment'
-        }
         const permission: MediaStreamConstraints = {
             video: {
-                width: { min: 1280 },
-                height: { min: 720 }
+                width: {min: 1280},
+                height: {min: 720}
             }
         }
         const result = await navigator.mediaDevices.getUserMedia(permission);
-        console.log(result);
         this.selectedDeviceId = result.id;
         this.$refs.myVideo.srcObject = result;
-        result.getTracks().forEach((track) => {
-            this.myConnection.addTrack(track, result);
-        })
-
-        navigator.mediaDevices.enumerateDevices().then((devices) => {
-            this.allDevices = devices;
-            console.log(this.allDevices);
-        }, (error) => {
-            console.log(error);
-        });
     }
 
     allowSound() {
         const permission: MediaStreamConstraints = {
             audio: true
         }
-        navigator.mediaDevices.getUserMedia(permission).then((result) => {
-        })
+        navigator.mediaDevices.getUserMedia(permission);
     }
 
     onVideoSourceChange() {
@@ -180,21 +181,46 @@ export default class WebRtc extends Vue {
     }
 
     async handleRequestCall(socketId: string) {
-        console.log('Call me');
-        if (socketId === this.socketId || this.isStartedCall) {
+        await this.connectCamera();
+        console.log('Call Me');
+        if (socketId === this.socketId || this.isStartedCall || this.myConnection) {
             return;
         }
+        this.myConnection = new RTCPeerConnection({
+            iceServers: [{urls: "stun:stun.1.google.com:19302"}]
+        });
         this.isStartedCall = true;
+        this.myConnection.ontrack = (event) => {
+            console.log('[MY_CONNECTION][ON_TRACK]:', event);
+        };
+        this.myConnection.onicecandidate = (event) => {
+            console.log('[MY_CONNECTION][ON_ICE_CANDIDATE]:', event);
+            if (event.candidate) {
+                this.socket.emit('send-self-candidate', {
+                    targetId: socketId,
+                    candidate: event.candidate
+                });
+            }
+        };
+        const stream = this.$refs.myVideo.srcObject as MediaStream;
+        stream.getTracks().forEach((track) => {
+            this.myConnection.addTrack(track, stream);
+        });
         const offer = await this.myConnection.createOffer();
         await this.myConnection.setLocalDescription(new RTCSessionDescription(offer));
         this.socket.emit('call-user', {
             targetId: socketId,
             offer: this.myConnection.localDescription
-        })
+        });
     }
 
-    updateName() {
-        this.socket.emit('update-name', this.userName)
+    private updateName() {
+        this.socket.emit('update-name', this.userName);
+    }
+
+    beforeDestroy() {
+        if (this.myConnection) this.myConnection.close();
+        if (this.socket) this.socket.close();
     }
 }
 </script>
