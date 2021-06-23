@@ -102,7 +102,7 @@ export default class WebRtc extends Vue {
             if (this.remoteConnection) return;
             try {
                 this.remoteConnection = new RTCPeerConnection({
-                    iceServers: [{urls: "stun:stun.1.google.com:19302"}]
+                    iceServers: [{urls: "turn:turn01.hubl.in?transport=udp"}]
                 });
                 this.remoteConnection.ontrack = (event) => {
                     console.log('[REMOTE_CONNECTION][ON_TRACK]:', event);
@@ -187,7 +187,7 @@ export default class WebRtc extends Vue {
             return;
         }
         this.myConnection = new RTCPeerConnection({
-            iceServers: [{urls: "stun:stun.1.google.com:19302"}]
+            iceServers: [{urls: "turn:turn01.hubl.in?transport=udp"}]
         });
         this.isStartedCall = true;
         this.myConnection.ontrack = (event) => {
