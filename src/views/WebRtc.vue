@@ -214,13 +214,17 @@ export default class WebRtc extends Vue {
         });
     }
 
-    private updateName() {
+    updateName() {
         this.socket.emit('update-name', this.userName);
     }
 
     beforeDestroy() {
-        if (this.myConnection) this.myConnection.close();
-        if (this.socket) this.socket.close();
+        if (this.myConnection) {
+            this.myConnection.close();
+        }
+        if (this.socket) {
+            this.socket.close();
+        }
     }
 }
 </script>
