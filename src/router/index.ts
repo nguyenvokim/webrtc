@@ -1,15 +1,21 @@
 import Vue from 'vue';
 import VueRouter, {RouteConfig} from 'vue-router';
 import WebRtc from '../views/WebRtc.vue';
+import Dashboard from '@/views/Dashboard.vue';
 
 Vue.use(VueRouter);
 
 const routes: RouteConfig[] = [
     {
-        path: '*',
+        path: '/web-rtc',
         name: 'WebRtc',
         component: WebRtc,
-    }
+    },
+    {
+        path: '/',
+        name: 'Dashboard',
+        component: Dashboard,
+    },
 ];
 
 const router = new VueRouter({
