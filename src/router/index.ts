@@ -21,7 +21,7 @@ const routes: RouteConfig[] = [
         component: Dashboard,
     },
     {
-            path: '/slowFirst',
+        path: '/slowFirst',
         name: 'SlowFirst',
         component: TestSlow,
     },
