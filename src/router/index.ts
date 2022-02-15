@@ -2,6 +2,7 @@ import Vue from 'vue';
 import VueRouter, {RouteConfig} from 'vue-router';
 import WebRtc from '../views/WebRtc.vue';
 import Dashboard from '@/views/Dashboard.vue';
+<<<<<<< HEAD
 import TestSlow from '@/views/TestSlow.vue';
 import TestSlowAnother from '@/views/TestSlowAnother.vue';
 import NonSlowAnother from '@/views/NonSlowAnother.vue';
