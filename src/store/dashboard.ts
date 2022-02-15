@@ -5,14 +5,14 @@ import DashboardService from '@/services/DashboardService';
 
 export interface DashboardStateModel {
     users: UserModel[];
-    profile: UserModel | null;
-    isLoading: boolean;
+    profile: UserModel | null | object;
+    isLoading: boolean | object
 }
 
 const initialState: DashboardStateModel = {
     users: [],
-    profile: null,
-    isLoading: true,
+    profile: {},
+    isLoading: {},
 }
 
 const getters: GetterTree<DashboardStateModel, RootState> = {
